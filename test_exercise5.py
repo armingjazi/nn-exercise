@@ -128,7 +128,7 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
     def test_select_fewer_than_available(self):
         """Test selecting fewer people than available"""
         names_list = "Alice Smith, Bob Jones, Charlie Brown, Diana Prince, Eve Wilson"
-        result = select_random_people_from_list(names_list, count=3)
+        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 3})
 
         names = result.split(", ")
         assert len(names) == 3
@@ -137,21 +137,21 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
     def test_select_more_than_available(self):
         """Test selecting more people than available"""
         names_list = "Alice Smith, Bob Jones"
-        result = select_random_people_from_list(names_list, count=10)
+        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 10})
 
         names = result.split(", ")
         assert len(names) == 2
 
     def test_select_empty_list(self):
         """Test selecting from empty list"""
-        result = select_random_people_from_list("", count=5)
+        result = select_random_people_from_list.invoke({"names_list": "", "count": 5})
 
         assert "Error" in result
 
     def test_select_with_whitespace_handling(self):
         """Test that function properly handles extra whitespace in names"""
         names_list = " Alice Smith ,  Bob Jones  , Charlie Brown "
-        result = select_random_people_from_list(names_list, count=2)
+        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 2})
 
         names = result.split(", ")
         assert len(names) == 2
@@ -245,7 +245,7 @@ class TestIdentifyPersonWithLLM(unittest.TestCase):
         expected_response = "Albert Einstein was a theoretical physicist."
         mock_llm.identify_person.return_value = expected_response
 
-        result = identify_person_with_llm("Albert Einstein")
+        result = identify_person_with_llm.invoke({"person_name": "Albert Einstein"})
 
         # Verify the backend was called with correct arguments
         mock_llm.identify_person.assert_called_once_with("Albert", "Einstein")
@@ -259,13 +259,13 @@ class TestIdentifyPersonWithLLM(unittest.TestCase):
         mock_llm_class.return_value = mock_llm
         mock_llm.identify_person.side_effect = Exception("LLM error")
 
-        result = identify_person_with_llm("Test Person")
+        result = identify_person_with_llm.invoke({"person_name": "Test Person"})
 
         assert "Error identifying person" in result
 
     def test_identify_person_invalid_name(self):
         """Test identification with invalid name format"""
-        result = identify_person_with_llm("SingleName")
+        result = identify_person_with_llm.invoke({"person_name": "SingleName"})
 
         assert "Invalid name format" in result
 
@@ -277,7 +277,7 @@ class TestCheckIfNotable(unittest.TestCase):
         """Test checking notable person"""
         person_info = "Albert Einstein was a famous theoretical physicist who won the Nobel Prize."
 
-        result = check_if_notable(person_info)
+        result = check_if_notable.invoke({"person_info": person_info})
 
         assert "YES" in result
         assert "famous" in result or "Nobel" in result
@@ -286,7 +286,7 @@ class TestCheckIfNotable(unittest.TestCase):
         """Test checking unknown person"""
         person_info = "Unknown person"
 
-        result = check_if_notable(person_info)
+        result = check_if_notable.invoke({"person_info": person_info})
 
         assert "NO" in result
         assert "unknown" in result.lower()
@@ -295,7 +295,7 @@ class TestCheckIfNotable(unittest.TestCase):
         """Test checking with error information"""
         person_info = "Error identifying person: API failed"
 
-        result = check_if_notable(person_info)
+        result = check_if_notable.invoke({"person_info": person_info})
 
         assert "NO" in result
 
@@ -303,7 +303,7 @@ class TestCheckIfNotable(unittest.TestCase):
         """Test checking person without notable keywords"""
         person_info = "John Smith is a software developer at a small company."
 
-        result = check_if_notable(person_info)
+        result = check_if_notable.invoke({"person_info": person_info})
 
         # Should return UNCERTAIN since no notable keywords are present
         assert "UNCERTAIN" in result
@@ -318,7 +318,7 @@ class TestResearchBestWork(unittest.TestCase):
         person_name = "Marie Curie"
         person_info = "Marie Curie was a physicist and chemist who won two Nobel Prizes."
 
-        result = research_best_work(person_name, person_info)
+        result = research_best_work.invoke({"person_name": person_name, "person_info": person_info})
 
         # Should contain the person's name and info in the prompt
         assert person_name in result

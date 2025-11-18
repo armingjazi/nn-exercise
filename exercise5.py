@@ -87,6 +87,7 @@ def filter_users_by_birth_year(users: List[User], max_birth_year: int = 2000) ->
         return f"Error filtering users: {str(e)}"
 
 
+@tool
 def select_random_people_from_list(names_list: str, count: int = 5) -> str:
     """
     Select random people from a comma-separated list of names.
@@ -147,6 +148,7 @@ def search_wikipedia_for_person(person_name: str) -> str:
         return f"Error searching Wikipedia: {str(e)}"
 
 
+@tool
 def identify_person_with_llm(person_name: str) -> str:
     """
     Identify who a person is using the LLM backend.
@@ -171,6 +173,7 @@ def identify_person_with_llm(person_name: str) -> str:
         return f"Error identifying person: {str(e)}"
 
 
+@tool
 def check_if_notable(person_info: str) -> str:
     """
     Analyze if a person is notable based on their initial identification.
@@ -218,6 +221,7 @@ def check_if_notable(person_info: str) -> str:
     return f"UNCERTAIN - Needs further research: {person_info}"
 
 
+@tool
 def research_best_work(person_name: str, person_info: str) -> str:
     """
     Research and return details about a person's best work or notable achievement.
