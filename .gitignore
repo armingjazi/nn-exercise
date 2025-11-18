@@ -12,3 +12,4 @@ wheels/
 .hoosh
 .claude
 .coverage
+.pytest_cache

@@ -5,7 +5,6 @@ and formats the results as an array of full names.
 """
 
 import requests
-from datetime import datetime
 from typing import List
 
 

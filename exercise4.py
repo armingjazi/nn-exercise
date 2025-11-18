@@ -37,22 +37,167 @@ def select_random_people(filtered_names: List[str], count: int = 5) -> List[Tupl
     return people
 
 
+def categorize_identification(full_name: str, identification: str) -> dict:
+    """
+    Categorize identification results for better presentation.
+
+    Args:
+        full_name: Person's full name
+        identification: Identification text from LLM/Wikipedia
+
+    Returns:
+        dict: Category, confidence, and details
+    """
+    # Check for Wikipedia verification
+    if "(Source: Wikipedia -" in identification:
+        category = "✅ Verified Notable Person"
+        confidence = "High"
+    # Check for errors
+    elif "Error" in identification or "error" in identification:
+        category = "⚠️ Error"
+        confidence = "N/A"
+    # Check for no Wikipedia article
+    elif "No Wikipedia article found" in identification:
+        if "Unknown person" in identification:
+            category = "❌ Unknown/Non-Notable"
+            confidence = "Low"
+        else:
+            category = "⚠️ Possibly Notable (Unverified)"
+            confidence = "Medium"
+    # Check for fictional characters
+    elif any(keyword in identification.lower()
+             for keyword in ["fictional", "character", "anime", "movie", "tv show", "novel"]):
+        category = "🎭 Fictional Character"
+        confidence = "High"
+    # Default: Unknown
+    else:
+        category = "❌ Unknown/Non-Notable"
+        confidence = "Low"
+
+    return {
+        "name": full_name,
+        "category": category,
+        "confidence": confidence,
+        "details": identification
+    }
+
+
 def display_identifications(identifications: dict[str, str]) -> None:
     """
-    Display the LLM identifications in a formatted manner.
-    
+    Display the LLM identifications in a formatted, categorized manner.
+
     Args:
         identifications: Dictionary mapping full_name -> identification
     """
-    print("\n" + "="*70)
-    print("LLM IDENTIFICATIONS")
-    print("="*70)
-    
-    for full_name, identification in identifications.items():
-        print(f"\n📌 {full_name}:")
-        print(f"   {identification}")
-    
-    print("\n" + "="*70 + "\n")
+    # Categorize all results
+    categorized = [
+        categorize_identification(name, ident)
+        for name, ident in identifications.items()
+    ]
+
+    # Group by category
+    categories = {
+        "✅ Verified Notable Person": [],
+        "⚠️ Possibly Notable (Unverified)": [],
+        "🎭 Fictional Character": [],
+        "❌ Unknown/Non-Notable": [],
+        "⚠️ Error": []
+    }
+
+    for result in categorized:
+        categories[result["category"]].append(result)
+
+    # Display header
+    print("\n" + "="*80)
+    print("IDENTIFICATION RESULTS - CATEGORIZED")
+    print("="*80)
+
+    # Quick stats
+    total = len(categorized)
+    verified = len(categories["✅ Verified Notable Person"])
+    unknown = len(categories["❌ Unknown/Non-Notable"])
+
+    print(f"\n📊 Quick Stats: {total} people processed | "
+          f"{verified} verified ({verified/total*100:.0f}%) | "
+          f"{unknown} unknown ({unknown/total*100:.0f}%)")
+
+    # Display each category
+    for category, items in categories.items():
+        if items:
+            print(f"\n{category} ({len(items)} {'person' if len(items) == 1 else 'people'})")
+            print("-" * 80)
+
+            for item in items:
+                print(f"\n  {item['name']} (Confidence: {item['confidence']})")
+
+                # Truncate long details for better readability
+                details = item['details']
+                if len(details) > 300:
+                    # Find a good break point (sentence or newline)
+                    truncate_at = details.rfind('.', 0, 300)
+                    if truncate_at == -1:
+                        truncate_at = details.rfind('\n', 0, 300)
+                    if truncate_at == -1:
+                        truncate_at = 300
+
+                    # Split into lines for indentation
+                    for line in details[:truncate_at + 1].split('\n'):
+                        if line.strip():
+                            print(f"    {line.strip()}")
+                    print("    ... (truncated)")
+                else:
+                    # Split into lines for proper indentation
+                    for line in details.split('\n'):
+                        if line.strip():
+                            print(f"    {line.strip()}")
+        else:
+            print(f"\n{category} (0 people)")
+            print("-" * 80)
+            print("  (none found)")
+
+    # Display summary statistics
+    display_summary_statistics(categorized)
+
+    print("\n" + "="*80 + "\n")
+
+
+def display_summary_statistics(categorized_results: list[dict]) -> None:
+    """
+    Display summary statistics of the identification results.
+
+    Args:
+        categorized_results: List of categorized identification results
+    """
+    print("\n" + "="*80)
+    print("SUMMARY STATISTICS")
+    print("="*80)
+
+    total = len(categorized_results)
+    if total == 0:
+        print("No results to display")
+        return
+
+    # Count by category
+    category_counts = {}
+    for result in categorized_results:
+        cat = result["category"]
+        category_counts[cat] = category_counts.get(cat, 0) + 1
+
+    # Display counts
+    print(f"\nTotal People Processed: {total}")
+    for category, count in category_counts.items():
+        percentage = (count / total) * 100
+        print(f"{category}: {count} ({percentage:.1f}%)")
+
+    # Success rate
+    verified = category_counts.get("✅ Verified Notable Person", 0)
+    print(f"\nVerification Success Rate: {verified}/{total} ({verified/total*100:.1f}%)")
+
+    # Helpful note
+    if verified == 0:
+        print("\n💡 Note: Most random users from randomuser.me are fictional and won't have")
+        print("   Wikipedia articles. This is expected behavior. To see verified results,")
+        print("   the API would need to return names matching real notable people.")
 
 
 def main():
