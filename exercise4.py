@@ -117,9 +117,12 @@ def display_identifications(identifications: dict[str, str]) -> None:
     verified = len(categories["✅ Verified Notable Person"])
     unknown = len(categories["❌ Unknown/Non-Notable"])
 
-    print(f"\n📊 Quick Stats: {total} people processed | "
-          f"{verified} verified ({verified/total*100:.0f}%) | "
-          f"{unknown} unknown ({unknown/total*100:.0f}%)")
+    if total > 0:
+        print(f"\n📊 Quick Stats: {total} people processed | "
+              f"{verified} verified ({verified/total*100:.0f}%) | "
+              f"{unknown} unknown ({unknown/total*100:.0f}%)")
+    else:
+        print(f"\n📊 Quick Stats: {total} people processed")
 
     # Display each category
     for category, items in categories.items():

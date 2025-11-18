@@ -104,57 +104,67 @@ class TestLLMBackendInit(unittest.TestCase):
 
 class TestLLMBackendIdentify:
     """Test suite for LLM identification methods"""
-    
-    @patch('llm_backend.OpenAI')
-    def test_identify_person_success(self, mock_openai_class):
+
+    @patch('llm_backend.requests.post')
+    def test_identify_person_success(self, mock_post):
         """Test successful person identification"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-        
-        mock_message = MagicMock()
-        mock_message.content = [MagicMock(text="Albert Einstein was a theoretical physicist.")]
-        mock_client.messages.create.return_value = mock_message
-        
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "Albert Einstein was a theoretical physicist."
+                    }
+                }
+            ]
+        }
+        mock_post.return_value = mock_response
+
         # Test
         with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
             llm = LLMBackend()
             result = llm.identify_person("Albert", "Einstein")
-            
+
             assert "Albert Einstein" in result or "physicist" in result
-    
-    @patch('llm_backend.OpenAI')
-    def test_identify_person_api_error(self, mock_openai_class):
+
+    @patch('llm_backend.requests.post')
+    def test_identify_person_api_error(self, mock_post):
         """Test handling of API errors"""
         # Setup mock to raise error
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-        mock_client.messages.create.side_effect = Exception("API Error")
-        
+        mock_post.side_effect = Exception("API Error")
+
         # Test
         with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
             llm = LLMBackend()
             result = llm.identify_person("Test", "Person")
-            
+
             assert "Error" in result
-    
-    @patch('llm_backend.OpenAI')
-    def test_batch_identify_people(self, mock_openai_class):
+
+    @patch('llm_backend.requests.post')
+    def test_batch_identify_people(self, mock_post):
         """Test batch identification of multiple people"""
-        # Setup mock
-        mock_client = MagicMock()
-        mock_openai_class.return_value = mock_client
-        
-        mock_message = MagicMock()
-        mock_message.content = [MagicMock(text="A famous person.")]
-        mock_client.messages.create.return_value = mock_message
-        
+        # Setup mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "choices": [
+                {
+                    "message": {
+                        "content": "A famous person."
+                    }
+                }
+            ]
+        }
+        mock_post.return_value = mock_response
+
         # Test
         with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
             llm = LLMBackend()
             people = [("John", "Doe"), ("Jane", "Smith")]
             results = llm.batch_identify_people(people)
-            
+
             assert len(results) == 2
             assert "John Doe" in results
             assert "Jane Smith" in results

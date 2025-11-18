@@ -51,16 +51,15 @@ This project implements **5 progressive exercises**, each building on concepts f
 **Key Innovation:** Wikipedia-first approach
 
 1. Searches Wikipedia for each person
-2. If found � LLM formats the information (verified source)
-3. If not found � LLM uses its knowledge (unverified)
+2. If found: LLM formats the information (verified source)
+3. If not found: LLM uses its knowledge (unverified)
 
 **Features:**
 
--  **Categorized results**: Verified, Unknown, Fictional, Error
-- =� **Summary statistics**: Success rate, confidence levels
-- =
-  **Source attribution**: Shows Wikipedia URLs
-- <� **Smart presentation**: Grouped by category with confidence indicators
+- **Categorized results**: Verified, Unknown, Fictional, Error
+- **Summary statistics**: Success rate, confidence levels
+- **Source attribution**: Shows Wikipedia URLs
+- **Smart presentation**: Grouped by category with confidence indicators
 
 **Technologies:**
 
