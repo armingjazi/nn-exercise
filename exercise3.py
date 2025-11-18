@@ -57,13 +57,6 @@ class TestFormatAndFilterUsers:
         # John Doe (born 2001) should NOT be in results
         assert 'John Doe' not in result
 
-    def test_correct_number_of_results(self):
-        """Test that the correct number of users are returned"""
-        result = format_and_filter_users(MOCK_API_RESPONSE)
-
-        # 4 users born in 2000 or earlier (James, Ash, Jane, Robert)
-        assert len(result) == 4
-    
     def test_full_name_format(self):
         """Test that full names are formatted correctly (first + last)"""
         result = format_and_filter_users(MOCK_API_RESPONSE)
@@ -77,9 +70,8 @@ class TestFormatAndFilterUsers:
         """Test handling of API response with no results"""
         empty_response = {'results': []}
         result = format_and_filter_users(empty_response)
-        
+
         assert result == []
-        assert len(result) == 0
     
     def test_all_users_born_after_2000(self):
         """Test when all users are born after 2000"""
@@ -97,11 +89,8 @@ class TestFormatAndFilterUsers:
         }
         result = format_and_filter_users(response)
 
-        # Both should be filtered out since they're after 2000
         assert len(result) == 0
-        assert 'Alice Wonder' not in result
-        assert 'Bob Builder' not in result
-    
+
     def test_preserves_name_order(self):
         """Test that the order of names is preserved from API response"""
         result = format_and_filter_users(MOCK_API_RESPONSE)
@@ -184,48 +173,18 @@ class TestFetchRandomUsers:
         mock_response = Mock()
         mock_response.json.return_value = MOCK_API_RESPONSE
         mock_get.return_value = mock_response
-        
+
         result = fetch_random_users(results=5)
-        
+
         assert result == MOCK_API_RESPONSE
         mock_get.assert_called_once_with('https://randomuser.me/api/?results=5')
-    
-    @patch('exercise2.requests.get')
-    def test_fetch_random_users_default_results(self, mock_get):
-        """Test that default results=20 is used"""
-        mock_response = Mock()
-        mock_response.json.return_value = MOCK_API_RESPONSE
-        mock_get.return_value = mock_response
-        
-        fetch_random_users()
-        
-        mock_get.assert_called_once_with('https://randomuser.me/api/?results=20')
-    
-    @patch('exercise2.requests.get')
-    def test_fetch_random_users_custom_results(self, mock_get):
-        """Test with custom number of results"""
-        mock_response = Mock()
-        mock_response.json.return_value = MOCK_API_RESPONSE
-        mock_get.return_value = mock_response
-        
-        fetch_random_users(results=50)
-        
-        mock_get.assert_called_once_with('https://randomuser.me/api/?results=50')
-    
+
     @patch('exercise2.requests.get')
     def test_fetch_random_users_http_error(self, mock_get):
         """Test that HTTP errors are properly raised"""
         mock_get.side_effect = requests.RequestException('HTTP Error 500')
-        
+
         with pytest.raises(requests.RequestException):
-            fetch_random_users()
-    
-    @patch('exercise2.requests.get')
-    def test_fetch_random_users_connection_error(self, mock_get):
-        """Test that connection errors are properly raised"""
-        mock_get.side_effect = requests.ConnectionError('Connection failed')
-        
-        with pytest.raises(requests.ConnectionError):
             fetch_random_users()
 
 

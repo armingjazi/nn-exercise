@@ -44,7 +44,7 @@ This project implements **5 progressive exercises**, each building on concepts f
 
 ---
 
-### Exercise 4: LLM Person Identification P
+### Exercise 4: LLM Person Identification 
 
 **Goal:** Identify people using Wikipedia + LLM
 
@@ -128,15 +128,24 @@ uv sync
 pip install -r requirements.txt
 ```
 
-### 2. Configure API Key
+### 2. Configure API Key and Model
 
 Create a `.env` file:
 
 ```bash
 OPENROUTER_API_KEY=your_api_key_here
+
+# Optional: Specify model (default: openai/gpt-4o-mini)
+OPENROUTER_MODEL=openai/gpt-4o-mini
 ```
 
 Get a free API key at [OpenRouter](https://openrouter.ai)
+
+**Available Models:**
+- `openai/gpt-4o-mini` (default - fast, affordable)
+- `openai/gpt-4o` (more capable, higher cost)
+- `openai/gpt-3.5-turbo` (fastest, cheapest)
+- See [OpenRouter Models](https://openrouter.ai/models) for full list
 
 ### 3. Run Exercises
 
@@ -164,7 +173,7 @@ pytest                           # All tests
 | **API Integration** | requests, Random User API       |
 | **LLM**             | OpenRouter (GPT-4o)             |
 | **Data Source**     | Wikipedia REST API              |
-| **Agent Framework** | LangChain, LangGraph            |
+| **Agent Framework** | LangChain                       |
 | **Testing**         | pytest, pytest-cov, pytest-mock |
 | **Configuration**   | python-dotenv                   |
 

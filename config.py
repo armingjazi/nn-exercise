@@ -70,7 +70,18 @@ class Config:
         """
         cls.load()
         return os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
-    
+
+    @classmethod
+    def get_openrouter_model(cls) -> str:
+        """
+        Get the OpenRouter model from environment or return default.
+
+        Returns:
+            str: The model name to use (default: openai/gpt-4o-mini)
+        """
+        cls.load()
+        return os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")
+
     @classmethod
     def get(cls, key: str, default: str | None = None) -> str | None:
         """

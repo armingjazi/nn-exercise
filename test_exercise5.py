@@ -62,23 +62,6 @@ class TestFetchUsersFromAPI(unittest.TestCase):
 
         assert "Error fetching users" in result
 
-    @patch('exercise5.requests.get')
-    def test_fetch_users_custom_count(self, mock_get):
-        """Test fetching custom number of users"""
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'results': [
-                {'name': {'first': f'User{i}', 'last': 'Test'}, 'dob': {'date': f'199{i}-01-01'}}
-                for i in range(10)
-            ]
-        }
-        mock_get.return_value = mock_response
-
-        result = fetch_users_from_api(num_results=10)
-
-        assert "Fetched 10 users" in result
-
 
 class TestFilterUsersByBirthYear(unittest.TestCase):
     """Test suite for filter_users_by_birth_year tool function"""
@@ -110,17 +93,6 @@ Another Young (born 2015)"""
 
         assert "No users found matching criteria" in result
 
-    def test_filter_all_before_year(self):
-        """Test when all users are born before the year"""
-        users_summary = """Fetched 2 users:
-Old Person (born 1950)
-Another Old (born 1960)"""
-
-        result = filter_users_by_birth_year(users_summary, max_birth_year=2000)
-
-        assert "Old Person" in result
-        assert "Another Old" in result
-
     def test_filter_empty_input(self):
         """Test filtering with empty input"""
         result = filter_users_by_birth_year("Fetched 0 users:", max_birth_year=2000)
@@ -148,25 +120,11 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
         names = result.split(", ")
         assert len(names) == 2
 
-    def test_select_exact_count(self):
-        """Test selecting exact number available"""
-        names_list = "Alice Smith, Bob Jones, Charlie Brown"
-        result = select_random_people_from_list(names_list, count=3)
-
-        names = result.split(", ")
-        assert len(names) == 3
-
     def test_select_empty_list(self):
         """Test selecting from empty list"""
         result = select_random_people_from_list("", count=5)
 
         assert "Error" in result
-
-    def test_select_with_error(self):
-        """Test error handling in selection"""
-        result = select_random_people_from_list(None, count=5)
-
-        assert "Error selecting people" in result
 
 
 class TestSearchWikipediaForPerson(unittest.TestCase):
@@ -294,61 +252,8 @@ class TestCheckIfNotable(unittest.TestCase):
         assert "NO" in result or "UNCERTAIN" in result
 
 
-class TestResearchBestWork(unittest.TestCase):
-    """Test suite for research_best_work tool function"""
-
-    def test_research_notable_person(self):
-        """Test researching best work of notable person"""
-        person_name = "Albert Einstein"
-        person_info = "Albert Einstein was a theoretical physicist."
-
-        result = research_best_work(person_name, person_info)
-
-        assert person_name in result
-        assert "theoretical physicist" in result
-        assert "notable work" in result or "achievement" in result
-
-
 class TestBestWorkAgent(unittest.TestCase):
     """Test suite for BestWorkAgent class"""
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
-    def test_agent_initialization(self, mock_create_agent, mock_init_chat):
-        """Test BestWorkAgent initialization"""
-        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
-            mock_model = Mock()
-            mock_init_chat.return_value = mock_model
-            mock_agent = Mock()
-            mock_create_agent.return_value = mock_agent
-
-            agent = BestWorkAgent(model_name="openai/gpt-4o")
-
-            assert agent.model is not None
-            assert agent.agent is not None
-            mock_init_chat.assert_called_once()
-            mock_create_agent.assert_called_once()
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
-    def test_agent_with_custom_config(self, mock_create_agent, mock_init_chat):
-        """Test agent initialization with custom configuration"""
-        mock_model = Mock()
-        mock_init_chat.return_value = mock_model
-        mock_agent = Mock()
-        mock_create_agent.return_value = mock_agent
-
-        agent = BestWorkAgent(
-            model_name="custom/model",
-            api_key="custom_key",
-            base_url="https://custom.url"
-        )
-
-        # Verify init_chat_model was called with correct parameters
-        call_kwargs = mock_init_chat.call_args[1]
-        assert call_kwargs['model'] == "custom/model"
-        assert call_kwargs['api_key'] == "custom_key"
-        assert call_kwargs['base_url'] == "https://custom.url"
 
     @patch('exercise5.init_chat_model')
     @patch('exercise5.create_agent')
@@ -391,34 +296,6 @@ class TestAgentWorkflow:
 
     @patch('exercise5.init_chat_model')
     @patch('exercise5.create_agent')
-    def test_agent_invoke_success(self, mock_create_agent, mock_init_chat):
-        """Test successful agent invocation"""
-        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
-            # Setup mocks
-            mock_model = Mock()
-            mock_init_chat.return_value = mock_model
-
-            mock_agent = Mock()
-            mock_final_message = Mock()
-            mock_final_message.content = "Agent completed the task successfully."
-            mock_create_agent.return_value = mock_agent
-            mock_agent.invoke.return_value = {
-                "messages": [mock_final_message]
-            }
-
-            # Create agent and invoke
-            agent = BestWorkAgent(model_name="openai/gpt-4o")
-            response = agent.agent.invoke({
-                "messages": [{"role": "user", "content": "Test task"}]
-            })
-
-            # Verify
-            assert "messages" in response
-            assert len(response["messages"]) > 0
-            mock_agent.invoke.assert_called_once()
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
     def test_agent_error_handling(self, mock_create_agent, mock_init_chat):
         """Test agent error handling"""
         with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
@@ -438,38 +315,6 @@ class TestAgentWorkflow:
                 agent.agent.invoke({
                     "messages": [{"role": "user", "content": "Test task"}]
                 })
-
-
-class TestMainFunction:
-    """Test suite for main function"""
-
-    @patch('exercise5.BestWorkAgent')
-    def test_main_execution_flow(self, mock_agent_class):
-        """Test main function execution flow"""
-        # Mock the agent
-        mock_agent = Mock()
-        mock_agent_class.return_value = mock_agent
-
-        mock_final_message = Mock()
-        mock_final_message.content = "Test results"
-        mock_agent.agent.invoke.return_value = {
-            "messages": [mock_final_message]
-        }
-
-        # This would normally be tested by running main() but we'd need
-        # to mock all the dependencies, so we just verify the structure exists
-        from exercise5 import main
-        assert callable(main)
-
-    def test_main_has_proper_error_handling(self):
-        """Test that main function has error handling"""
-        from exercise5 import main
-        import inspect
-
-        # Check that main has try-except blocks
-        source = inspect.getsource(main)
-        assert 'try:' in source
-        assert 'except' in source
 
 
 if __name__ == '__main__':

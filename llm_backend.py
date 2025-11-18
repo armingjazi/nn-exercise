@@ -16,13 +16,13 @@ class LLMBackend:
     OpenRouter provides free tier access to various open-source models.
     """
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "openai/gpt-4o", base_url: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, base_url: Optional[str] = None):
         """
         Initialize the LLM backend.
 
         Args:
             api_key: OpenRouter API key. If None, will load from .env or environment
-            model: The model to use (default: openai/gpt-4o)
+            model: The model to use. If None, will load from .env or use default (openai/gpt-4o-mini)
             base_url: OpenRouter base URL. If None, will load from config
 
         Raises:
@@ -33,7 +33,10 @@ class LLMBackend:
         else:
             self.api_key = Config.get_openrouter_api_key()
 
-        self.model = model
+        if model:
+            self.model = model
+        else:
+            self.model = Config.get_openrouter_model()
 
         if base_url:
             self.base_url = base_url

@@ -213,7 +213,7 @@ class BestWorkAgent:
 
     def __init__(
         self,
-        model_name: str = "openai/gpt-4o",
+        model_name: str | None = None,
         api_key: str | None = None,
         base_url: str | None = None
     ):
@@ -221,7 +221,7 @@ class BestWorkAgent:
         Initialize the agent with OpenRouter configuration.
 
         Args:
-            model_name: The model to use (default: openai/gpt-4o)
+            model_name: The model to use. If None, will load from .env or use default (openai/gpt-4o-mini)
             api_key: OpenRouter API key. If None, will load from config
             base_url: OpenRouter base URL. If None, will load from config
         """
@@ -230,6 +230,9 @@ class BestWorkAgent:
 
         if base_url is None:
             base_url = Config.get_openrouter_base_url()
+
+        if model_name is None:
+            model_name = Config.get_openrouter_model()
 
         # Initialize the chat model using LangChain's init_chat_model
         self.model = init_chat_model(
@@ -272,8 +275,9 @@ def main():
     try:
         # Initialize the LangChain agent
         print("🤖 Initializing LangChain agent with init_chat_model...")
-        agent = BestWorkAgent(model_name="openai/gpt-4o")
-        print("✅ Agent initialized with 7 research tools:")
+        agent = BestWorkAgent()
+        print(f"✅ Agent initialized with model: {agent.model._model_name if hasattr(agent.model, '_model_name') else 'configured model'}")
+        print("✅ Agent has 7 research tools:")
         print("   1. fetch_users_from_api")
         print("   2. filter_users_by_birth_year")
         print("   3. select_random_people_from_list")
