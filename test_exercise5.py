@@ -13,24 +13,28 @@ from exercise5 import (
     search_wikipedia_for_person,
     identify_person_with_llm,
     check_if_notable,
-    research_best_work,
-    BestWorkAgent,
-    User
+    User,
 )
 
 
 class TestFetchUsersFromAPI(unittest.TestCase):
     """Test suite for fetch_users_from_api tool function"""
 
-    @patch('exercise5.requests.get')
+    @patch("exercise5.requests.get")
     def test_fetch_users_success(self, mock_get):
         """Test successful user fetching"""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'results': [
-                {'name': {'first': 'John', 'last': 'Doe'}, 'dob': {'date': '1990-01-01'}},
-                {'name': {'first': 'Jane', 'last': 'Smith'}, 'dob': {'date': '1985-05-15'}}
+            "results": [
+                {
+                    "name": {"first": "John", "last": "Doe"},
+                    "dob": {"date": "1990-01-01"},
+                },
+                {
+                    "name": {"first": "Jane", "last": "Smith"},
+                    "dob": {"date": "1985-05-15"},
+                },
             ]
         }
         mock_get.return_value = mock_response
@@ -42,7 +46,7 @@ class TestFetchUsersFromAPI(unittest.TestCase):
         assert "Jane Smith" in result
         assert "1990" in result
 
-    @patch('exercise5.requests.get')
+    @patch("exercise5.requests.get")
     def test_fetch_users_api_error(self, mock_get):
         """Test handling of API errors"""
         mock_response = Mock()
@@ -54,7 +58,7 @@ class TestFetchUsersFromAPI(unittest.TestCase):
         assert "Error" in result
         assert "500" in result
 
-    @patch('exercise5.requests.get')
+    @patch("exercise5.requests.get")
     def test_fetch_users_timeout(self, mock_get):
         """Test handling of timeout errors"""
         mock_get.side_effect = Exception("Timeout")
@@ -74,10 +78,12 @@ class TestFilterUsersByBirthYear(unittest.TestCase):
             User(name="Jane Smith", born="2005"),
             User(name="Bob Jones", born="1998"),
             User(name="Alice Brown", born="2010"),
-            User(name="Charlie Wilson", born="2000")
+            User(name="Charlie Wilson", born="2000"),
         ]
 
-        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+        result = filter_users_by_birth_year.invoke(
+            {"users": users, "max_birth_year": 2000}
+        )
 
         assert "John Doe" in result
         assert "Bob Jones" in result
@@ -89,10 +95,12 @@ class TestFilterUsersByBirthYear(unittest.TestCase):
         """Test when all users are born after the year"""
         users = [
             User(name="Young Person", born="2010"),
-            User(name="Another Young", born="2015")
+            User(name="Another Young", born="2015"),
         ]
 
-        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+        result = filter_users_by_birth_year.invoke(
+            {"users": users, "max_birth_year": 2000}
+        )
 
         assert "No users found matching criteria" in result
 
@@ -100,7 +108,9 @@ class TestFilterUsersByBirthYear(unittest.TestCase):
         """Test filtering with empty input"""
         users = []
 
-        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+        result = filter_users_by_birth_year.invoke(
+            {"users": users, "max_birth_year": 2000}
+        )
 
         assert "No users found matching criteria" in result
 
@@ -110,10 +120,12 @@ class TestFilterUsersByBirthYear(unittest.TestCase):
             User(name="Valid Person", born="1990"),
             User(name="Invalid Year", born="unknown"),
             User(name="Empty Year", born=""),
-            User(name="Another Valid", born="1995")
+            User(name="Another Valid", born="1995"),
         ]
 
-        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+        result = filter_users_by_birth_year.invoke(
+            {"users": users, "max_birth_year": 2000}
+        )
 
         # Should only include users with valid numeric years
         assert "Valid Person" in result
@@ -128,7 +140,9 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
     def test_select_fewer_than_available(self):
         """Test selecting fewer people than available"""
         names_list = "Alice Smith, Bob Jones, Charlie Brown, Diana Prince, Eve Wilson"
-        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 3})
+        result = select_random_people_from_list.invoke(
+            {"names_list": names_list, "count": 3}
+        )
 
         names = result.split(", ")
         assert len(names) == 3
@@ -137,7 +151,9 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
     def test_select_more_than_available(self):
         """Test selecting more people than available"""
         names_list = "Alice Smith, Bob Jones"
-        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 10})
+        result = select_random_people_from_list.invoke(
+            {"names_list": names_list, "count": 10}
+        )
 
         names = result.split(", ")
         assert len(names) == 2
@@ -151,28 +167,32 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
     def test_select_with_whitespace_handling(self):
         """Test that function properly handles extra whitespace in names"""
         names_list = " Alice Smith ,  Bob Jones  , Charlie Brown "
-        result = select_random_people_from_list.invoke({"names_list": names_list, "count": 2})
+        result = select_random_people_from_list.invoke(
+            {"names_list": names_list, "count": 2}
+        )
 
         names = result.split(", ")
         assert len(names) == 2
         # Names should be trimmed of whitespace
         assert all(name.strip() == name for name in names)
-        assert all(name in ["Alice Smith", "Bob Jones", "Charlie Brown"] for name in names)
+        assert all(
+            name in ["Alice Smith", "Bob Jones", "Charlie Brown"] for name in names
+        )
 
 
 class TestSearchWikipediaForPerson(unittest.TestCase):
     """Test suite for search_wikipedia_for_person tool function"""
 
-    @patch('search_tools.WikipediaSearch')
+    @patch("search_tools.WikipediaSearch")
     def test_wikipedia_search_found(self, mock_wiki_class):
         """Test successful Wikipedia search"""
         mock_wiki = Mock()
         mock_wiki_class.return_value = mock_wiki
         mock_wiki.search_person.return_value = {
-            'found': True,
-            'name': 'Albert Einstein',
-            'summary': 'Albert Einstein was a theoretical physicist.',
-            'url': 'https://en.wikipedia.org/wiki/Albert_Einstein'
+            "found": True,
+            "name": "Albert Einstein",
+            "summary": "Albert Einstein was a theoretical physicist.",
+            "url": "https://en.wikipedia.org/wiki/Albert_Einstein",
         }
 
         result = search_wikipedia_for_person.invoke({"person_name": "Albert Einstein"})
@@ -182,14 +202,14 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
         assert "theoretical physicist" in result
         assert "wikipedia.org" in result
 
-    @patch('search_tools.WikipediaSearch')
+    @patch("search_tools.WikipediaSearch")
     def test_wikipedia_search_not_found(self, mock_wiki_class):
         """Test Wikipedia search when article not found"""
         mock_wiki = Mock()
         mock_wiki_class.return_value = mock_wiki
         mock_wiki.search_person.return_value = {
-            'found': False,
-            'name': 'Random Person',
+            "found": False,
+            "name": "Random Person",
         }
 
         result = search_wikipedia_for_person.invoke({"person_name": "Random Person"})
@@ -197,15 +217,15 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
         assert "No Wikipedia article found" in result
         assert "Random Person" in result
 
-    @patch('search_tools.WikipediaSearch')
+    @patch("search_tools.WikipediaSearch")
     def test_wikipedia_search_found_without_url(self, mock_wiki_class):
         """Test Wikipedia search with result but missing URL"""
         mock_wiki = Mock()
         mock_wiki_class.return_value = mock_wiki
         mock_wiki.search_person.return_value = {
-            'found': True,
-            'name': 'Jane Doe',
-            'summary': 'Jane Doe was a researcher.'
+            "found": True,
+            "name": "Jane Doe",
+            "summary": "Jane Doe was a researcher.",
         }
 
         result = search_wikipedia_for_person.invoke({"person_name": "Jane Doe"})
@@ -222,7 +242,7 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
 
         assert "Invalid name format" in result
 
-    @patch('search_tools.WikipediaSearch')
+    @patch("search_tools.WikipediaSearch")
     def test_wikipedia_search_error(self, mock_wiki_class):
         """Test Wikipedia search error handling"""
         mock_wiki = Mock()
@@ -237,7 +257,7 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
 class TestIdentifyPersonWithLLM(unittest.TestCase):
     """Test suite for identify_person_with_llm tool function"""
 
-    @patch('llm_backend.LLMBackend')
+    @patch("llm_backend.LLMBackend")
     def test_identify_person_success(self, mock_llm_class):
         """Test successful person identification"""
         mock_llm = Mock()
@@ -252,7 +272,7 @@ class TestIdentifyPersonWithLLM(unittest.TestCase):
         # Verify the response is returned correctly
         assert result == expected_response
 
-    @patch('llm_backend.LLMBackend')
+    @patch("llm_backend.LLMBackend")
     def test_identify_person_error(self, mock_llm_class):
         """Test person identification error handling"""
         mock_llm = Mock()
@@ -310,55 +330,5 @@ class TestCheckIfNotable(unittest.TestCase):
         assert "John Smith" in result
 
 
-class TestResearchBestWork(unittest.TestCase):
-    """Test suite for research_best_work function"""
-
-    def test_research_best_work_generates_prompt(self):
-        """Test that research_best_work generates a proper research prompt"""
-        person_name = "Marie Curie"
-        person_info = "Marie Curie was a physicist and chemist who won two Nobel Prizes."
-
-        result = research_best_work.invoke({"person_name": person_name, "person_info": person_info})
-
-        # Should contain the person's name and info in the prompt
-        assert person_name in result
-        assert person_info in result
-        # Should include research instructions
-        assert "notable work" in result.lower() or "achievement" in result.lower()
-        assert "famous for" in result.lower()
-
-
-class TestBestWorkAgent(unittest.TestCase):
-    """Test suite for BestWorkAgent class"""
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
-    def test_agent_tools_configuration(self, mock_create_agent, mock_init_chat):
-        """Test that agent is configured with all required tools"""
-        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
-            mock_model = Mock()
-            mock_init_chat.return_value = mock_model
-            mock_agent = Mock()
-            mock_create_agent.return_value = mock_agent
-
-            agent = BestWorkAgent(model_name="openai/gpt-4o")
-
-            # Verify create_agent was called with tools
-            call_args = mock_create_agent.call_args
-            tools = call_args[1]['tools']
-            assert len(tools) == 7  # Should have 7 tools
-
-            # Verify all expected tools are present
-            # Handle both StructuredTool objects (.name) and regular functions (.__name__)
-            tool_names = [getattr(tool, 'name', None) or tool.__name__ for tool in tools]
-            assert 'fetch_users_from_api' in tool_names
-            assert 'filter_users_by_birth_year' in tool_names
-            assert 'select_random_people_from_list' in tool_names
-            assert 'search_wikipedia_for_person' in tool_names
-            assert 'identify_person_with_llm' in tool_names
-            assert 'check_if_notable' in tool_names
-            assert 'research_best_work' in tool_names
-
-
-if __name__ == '__main__':
-    pytest.main([__file__, '-v', '--tb=short'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
