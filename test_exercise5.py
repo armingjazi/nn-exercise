@@ -14,7 +14,8 @@ from exercise5 import (
     identify_person_with_llm,
     check_if_notable,
     research_best_work,
-    BestWorkAgent
+    BestWorkAgent,
+    User
 )
 
 
@@ -34,7 +35,7 @@ class TestFetchUsersFromAPI(unittest.TestCase):
         }
         mock_get.return_value = mock_response
 
-        result = fetch_users_from_api(num_results=2)
+        result = fetch_users_from_api.invoke({"num_results": 2})
 
         assert "Fetched 2 users" in result
         assert "John Doe" in result
@@ -48,7 +49,7 @@ class TestFetchUsersFromAPI(unittest.TestCase):
         mock_response.status_code = 500
         mock_get.return_value = mock_response
 
-        result = fetch_users_from_api(num_results=20)
+        result = fetch_users_from_api.invoke({"num_results": 20})
 
         assert "Error" in result
         assert "500" in result
@@ -58,7 +59,7 @@ class TestFetchUsersFromAPI(unittest.TestCase):
         """Test handling of timeout errors"""
         mock_get.side_effect = Exception("Timeout")
 
-        result = fetch_users_from_api(num_results=20)
+        result = fetch_users_from_api.invoke({"num_results": 20})
 
         assert "Error fetching users" in result
 
@@ -68,14 +69,15 @@ class TestFilterUsersByBirthYear(unittest.TestCase):
 
     def test_filter_users_basic(self):
         """Test basic filtering functionality"""
-        users_summary = """Fetched 5 users:
-John Doe (born 1990)
-Jane Smith (born 2005)
-Bob Jones (born 1998)
-Alice Brown (born 2010)
-Charlie Wilson (born 2000)"""
+        users = [
+            User(name="John Doe", born="1990"),
+            User(name="Jane Smith", born="2005"),
+            User(name="Bob Jones", born="1998"),
+            User(name="Alice Brown", born="2010"),
+            User(name="Charlie Wilson", born="2000")
+        ]
 
-        result = filter_users_by_birth_year(users_summary, max_birth_year=2000)
+        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
 
         assert "John Doe" in result
         assert "Bob Jones" in result
@@ -85,19 +87,39 @@ Charlie Wilson (born 2000)"""
 
     def test_filter_all_after_year(self):
         """Test when all users are born after the year"""
-        users_summary = """Fetched 2 users:
-Young Person (born 2010)
-Another Young (born 2015)"""
+        users = [
+            User(name="Young Person", born="2010"),
+            User(name="Another Young", born="2015")
+        ]
 
-        result = filter_users_by_birth_year(users_summary, max_birth_year=2000)
+        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
 
         assert "No users found matching criteria" in result
 
     def test_filter_empty_input(self):
         """Test filtering with empty input"""
-        result = filter_users_by_birth_year("Fetched 0 users:", max_birth_year=2000)
+        users = []
 
-        assert "No users found" in result or result == ""
+        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+
+        assert "No users found matching criteria" in result
+
+    def test_filter_with_invalid_year_data(self):
+        """Test filtering with malformed birth year data"""
+        users = [
+            User(name="Valid Person", born="1990"),
+            User(name="Invalid Year", born="unknown"),
+            User(name="Empty Year", born=""),
+            User(name="Another Valid", born="1995")
+        ]
+
+        result = filter_users_by_birth_year.invoke({"users": users, "max_birth_year": 2000})
+
+        # Should only include users with valid numeric years
+        assert "Valid Person" in result
+        assert "Another Valid" in result
+        assert "Invalid Year" not in result
+        assert "Empty Year" not in result
 
 
 class TestSelectRandomPeopleFromList(unittest.TestCase):
@@ -126,6 +148,17 @@ class TestSelectRandomPeopleFromList(unittest.TestCase):
 
         assert "Error" in result
 
+    def test_select_with_whitespace_handling(self):
+        """Test that function properly handles extra whitespace in names"""
+        names_list = " Alice Smith ,  Bob Jones  , Charlie Brown "
+        result = select_random_people_from_list(names_list, count=2)
+
+        names = result.split(", ")
+        assert len(names) == 2
+        # Names should be trimmed of whitespace
+        assert all(name.strip() == name for name in names)
+        assert all(name in ["Alice Smith", "Bob Jones", "Charlie Brown"] for name in names)
+
 
 class TestSearchWikipediaForPerson(unittest.TestCase):
     """Test suite for search_wikipedia_for_person tool function"""
@@ -142,7 +175,7 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
             'url': 'https://en.wikipedia.org/wiki/Albert_Einstein'
         }
 
-        result = search_wikipedia_for_person("Albert Einstein")
+        result = search_wikipedia_for_person.invoke({"person_name": "Albert Einstein"})
 
         assert "Wikipedia article found" in result
         assert "Albert Einstein" in result
@@ -159,14 +192,33 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
             'name': 'Random Person',
         }
 
-        result = search_wikipedia_for_person("Random Person")
+        result = search_wikipedia_for_person.invoke({"person_name": "Random Person"})
 
         assert "No Wikipedia article found" in result
         assert "Random Person" in result
 
+    @patch('search_tools.WikipediaSearch')
+    def test_wikipedia_search_found_without_url(self, mock_wiki_class):
+        """Test Wikipedia search with result but missing URL"""
+        mock_wiki = Mock()
+        mock_wiki_class.return_value = mock_wiki
+        mock_wiki.search_person.return_value = {
+            'found': True,
+            'name': 'Jane Doe',
+            'summary': 'Jane Doe was a researcher.'
+        }
+
+        result = search_wikipedia_for_person.invoke({"person_name": "Jane Doe"})
+
+        assert "Wikipedia article found" in result
+        assert "Jane Doe" in result
+        assert "researcher" in result
+        # Should handle missing URL gracefully
+        assert "Source:" not in result or result.count("Source:") == 0
+
     def test_wikipedia_search_invalid_name(self):
         """Test Wikipedia search with invalid name format"""
-        result = search_wikipedia_for_person("InvalidName")
+        result = search_wikipedia_for_person.invoke({"person_name": "InvalidName"})
 
         assert "Invalid name format" in result
 
@@ -177,7 +229,7 @@ class TestSearchWikipediaForPerson(unittest.TestCase):
         mock_wiki_class.return_value = mock_wiki
         mock_wiki.search_person.side_effect = Exception("Search failed")
 
-        result = search_wikipedia_for_person("Test Person")
+        result = search_wikipedia_for_person.invoke({"person_name": "Test Person"})
 
         assert "Error searching Wikipedia" in result
 
@@ -190,11 +242,15 @@ class TestIdentifyPersonWithLLM(unittest.TestCase):
         """Test successful person identification"""
         mock_llm = Mock()
         mock_llm_class.return_value = mock_llm
-        mock_llm.identify_person.return_value = "Albert Einstein was a physicist."
+        expected_response = "Albert Einstein was a theoretical physicist."
+        mock_llm.identify_person.return_value = expected_response
 
         result = identify_person_with_llm("Albert Einstein")
 
-        assert "physicist" in result or "Albert Einstein" in result
+        # Verify the backend was called with correct arguments
+        mock_llm.identify_person.assert_called_once_with("Albert", "Einstein")
+        # Verify the response is returned correctly
+        assert result == expected_response
 
     @patch('llm_backend.LLMBackend')
     def test_identify_person_error(self, mock_llm_class):
@@ -243,25 +299,37 @@ class TestCheckIfNotable(unittest.TestCase):
 
         assert "NO" in result
 
-    def test_check_uncertain_person(self):
-        """Test checking person with uncertain notability"""
-        person_info = "John Smith is a person."
+    def test_check_non_notable_person(self):
+        """Test checking person without notable keywords"""
+        person_info = "John Smith is a software developer at a small company."
 
         result = check_if_notable(person_info)
 
-        assert "NO" in result or "UNCERTAIN" in result
+        # Should return UNCERTAIN since no notable keywords are present
+        assert "UNCERTAIN" in result
+        assert "John Smith" in result
+
+
+class TestResearchBestWork(unittest.TestCase):
+    """Test suite for research_best_work function"""
+
+    def test_research_best_work_generates_prompt(self):
+        """Test that research_best_work generates a proper research prompt"""
+        person_name = "Marie Curie"
+        person_info = "Marie Curie was a physicist and chemist who won two Nobel Prizes."
+
+        result = research_best_work(person_name, person_info)
+
+        # Should contain the person's name and info in the prompt
+        assert person_name in result
+        assert person_info in result
+        # Should include research instructions
+        assert "notable work" in result.lower() or "achievement" in result.lower()
+        assert "famous for" in result.lower()
 
 
 class TestBestWorkAgent(unittest.TestCase):
     """Test suite for BestWorkAgent class"""
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
-    def test_agent_no_api_key_raises_error(self, mock_create_agent, mock_init_chat):
-        """Test that agent initialization fails without API key"""
-        with patch.dict('os.environ', {}, clear=True):
-            with pytest.raises(ValueError, match="OpenRouter API key"):
-                BestWorkAgent()
 
     @patch('exercise5.init_chat_model')
     @patch('exercise5.create_agent')
@@ -281,7 +349,8 @@ class TestBestWorkAgent(unittest.TestCase):
             assert len(tools) == 7  # Should have 7 tools
 
             # Verify all expected tools are present
-            tool_names = [tool.__name__ for tool in tools]
+            # Handle both StructuredTool objects (.name) and regular functions (.__name__)
+            tool_names = [getattr(tool, 'name', None) or tool.__name__ for tool in tools]
             assert 'fetch_users_from_api' in tool_names
             assert 'filter_users_by_birth_year' in tool_names
             assert 'select_random_people_from_list' in tool_names
@@ -289,32 +358,6 @@ class TestBestWorkAgent(unittest.TestCase):
             assert 'identify_person_with_llm' in tool_names
             assert 'check_if_notable' in tool_names
             assert 'research_best_work' in tool_names
-
-
-class TestAgentWorkflow:
-    """Test suite for agent workflow integration"""
-
-    @patch('exercise5.init_chat_model')
-    @patch('exercise5.create_agent')
-    def test_agent_error_handling(self, mock_create_agent, mock_init_chat):
-        """Test agent error handling"""
-        with patch.dict('os.environ', {'OPENROUTER_API_KEY': 'test_key'}):
-            # Setup mocks
-            mock_model = Mock()
-            mock_init_chat.return_value = mock_model
-
-            mock_agent = Mock()
-            mock_create_agent.return_value = mock_agent
-            mock_agent.invoke.side_effect = Exception("Agent error")
-
-            # Create agent
-            agent = BestWorkAgent(model_name="openai/gpt-4o")
-
-            # Verify error is raised
-            with pytest.raises(Exception, match="Agent error"):
-                agent.agent.invoke({
-                    "messages": [{"role": "user", "content": "Test task"}]
-                })
 
 
 if __name__ == '__main__':

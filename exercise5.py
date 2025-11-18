@@ -4,13 +4,26 @@ This program uses LangChain's agent framework to create an intelligent agent
 that researches and provides details about notable people's best work.
 """
 
+from typing import List
+from pydantic import BaseModel, Field
 import random
+from langchain.tools import tool
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 import requests
 from config import Config
 
 
+class User(BaseModel):
+    name: str = Field(description="users name")
+    born: str = Field(description="birth year")
+
+
+class Users(BaseModel):
+    users: List[User]
+
+
+@tool
 def fetch_users_from_api(num_results: int = 20) -> str:
     """
     Fetch random users from the Random User API.
@@ -23,26 +36,27 @@ def fetch_users_from_api(num_results: int = 20) -> str:
     """
     try:
         response = requests.get(
-            f"https://randomuser.me/api/?results={num_results}",
-            timeout=10
+            f"https://randomuser.me/api/?results={num_results}", timeout=10
         )
         if response.status_code != 200:
             return f"Error: API returned status code {response.status_code}"
 
         data = response.json()
         users_summary = []
-        for user in data.get('results', []):
-            first = user['name']['first'].title()
-            last = user['name']['last'].title()
-            year = user.get('dob', {}).get('date', '')[:4]
+        for user in data.get("results", []):
+            first = user["name"]["first"].title()
+            last = user["name"]["last"].title()
+            year = user.get("dob", {}).get("date", "")[:4]
             users_summary.append(f"{first} {last} (born {year})")
-
+        print("-" * 80)
+        print(f"Fetched {len(users_summary)} users:\n" + "\n".join(users_summary))
         return f"Fetched {len(users_summary)} users:\n" + "\n".join(users_summary)
     except Exception as e:
         return f"Error fetching users: {str(e)}"
 
 
-def filter_users_by_birth_year(users_summary: str, max_birth_year: int = 2000) -> str:
+@tool(args_schema=Users)
+def filter_users_by_birth_year(users: List[User], max_birth_year: int = 2000) -> str:
     """
     Filter users to only include those born in or before the specified year.
 
@@ -55,17 +69,20 @@ def filter_users_by_birth_year(users_summary: str, max_birth_year: int = 2000) -
     """
     try:
         filtered_names = []
-        lines = users_summary.split('\n')[1:]  # Skip first summary line
+        for user in users:
+            name_part = user.name
+            year_part = user.born
 
-        for line in lines:
-            if '(born' in line:
-                name_part = line.split('(born')[0].strip()
-                year_part = line.split('(born')[1].strip(' )')
-
-                if year_part.isdigit() and int(year_part) <= max_birth_year:
-                    filtered_names.append(name_part)
-
-        return ", ".join(filtered_names) if filtered_names else "No users found matching criteria"
+            if year_part.isdigit() and int(year_part) <= max_birth_year:
+                filtered_names.append(name_part)
+        filtered_list = (
+            ", ".join(filtered_names)
+            if filtered_names
+            else "No users found matching criteria"
+        )
+        print("-" * 80)
+        print("filtered users: ", filtered_list)
+        return filtered_list
     except Exception as e:
         return f"Error filtering users: {str(e)}"
 
@@ -82,17 +99,21 @@ def select_random_people_from_list(names_list: str, count: int = 5) -> str:
         str: Comma-separated list of selected names
     """
     try:
-        names = [name.strip() for name in names_list.split(',') if name.strip()]
+        names = [name.strip() for name in names_list.split(",") if name.strip()]
         if not names:
             return "Error: No names provided"
 
         sample_size = min(count, len(names))
         selected = random.sample(names, sample_size)
-        return ", ".join(selected)
+        list_selected = ", ".join(selected)
+        print("-" * 80)
+        print("selected: ", list_selected)
+        return list_selected
     except Exception as e:
         return f"Error selecting people: {str(e)}"
 
 
+@tool
 def search_wikipedia_for_person(person_name: str) -> str:
     """
     Search Wikipedia for information about a person.
@@ -105,7 +126,8 @@ def search_wikipedia_for_person(person_name: str) -> str:
     """
     try:
         from search_tools import WikipediaSearch
-        parts = person_name.split(' ', 1)
+
+        parts = person_name.split(" ", 1)
         if len(parts) != 2:
             return "Invalid name format. Expected 'FirstName LastName'"
 
@@ -115,7 +137,7 @@ def search_wikipedia_for_person(person_name: str) -> str:
 
         if result["found"] and result.get("summary"):
             output = f"Wikipedia article found for {result['name']}:\n\n"
-            output += result['summary']
+            output += result["summary"]
             if result.get("url"):
                 output += f"\n\nSource: {result['url']}"
             return output
@@ -137,7 +159,8 @@ def identify_person_with_llm(person_name: str) -> str:
     """
     try:
         from llm_backend import LLMBackend
-        parts = person_name.split(' ', 1)
+
+        parts = person_name.split(" ", 1)
         if len(parts) != 2:
             return "Invalid name format. Expected 'FirstName LastName'"
 
@@ -165,10 +188,27 @@ def check_if_notable(person_info: str) -> str:
 
     # Keywords indicating notability
     notable_keywords = [
-        "famous", "renowned", "acclaimed", "Nobel", "Oscar", "Grammy",
-        "president", "prime minister", "CEO", "founder", "inventor",
-        "scientist", "author", "actor", "actress", "musician", "artist",
-        "director", "producer", "athlete", "champion"
+        "famous",
+        "renowned",
+        "acclaimed",
+        "Nobel",
+        "Oscar",
+        "Grammy",
+        "president",
+        "prime minister",
+        "CEO",
+        "founder",
+        "inventor",
+        "scientist",
+        "author",
+        "actor",
+        "actress",
+        "musician",
+        "artist",
+        "director",
+        "producer",
+        "athlete",
+        "champion",
     ]
 
     person_info_lower = person_info.lower()
@@ -215,7 +255,7 @@ class BestWorkAgent:
         self,
         model_name: str | None = None,
         api_key: str | None = None,
-        base_url: str | None = None
+        base_url: str | None = None,
     ):
         """
         Initialize the agent with OpenRouter configuration.
@@ -252,7 +292,7 @@ class BestWorkAgent:
                 search_wikipedia_for_person,
                 identify_person_with_llm,
                 check_if_notable,
-                research_best_work
+                research_best_work,
             ],
             system_prompt="""You are a research assistant specialized in identifying notable people
 and their achievements. You have access to tools to:
@@ -265,8 +305,8 @@ and their achievements. You have access to tools to:
 6. Determine if a person is notable
 7. Research their best work or most significant achievement
 
-Be autonomous, use the tools intelligently, and provide detailed, informative results.
-Always try Wikipedia search first before using LLM identification."""
+provide detailed, informative results.
+Always try Wikipedia search first before using LLM identification.""",
         )
 
 
@@ -276,7 +316,6 @@ def main():
         # Initialize the LangChain agent
         print("🤖 Initializing LangChain agent with init_chat_model...")
         agent = BestWorkAgent()
-        print(f"✅ Agent initialized with model: {agent.model._model_name if hasattr(agent.model, '_model_name') else 'configured model'}")
         print("✅ Agent has 7 research tools:")
         print("   1. fetch_users_from_api")
         print("   2. filter_users_by_birth_year")
@@ -295,7 +334,6 @@ def main():
         print("   - Identify each person")
         print("   - Assess notability")
         print("   - Research their best work")
-        print("\n" + "="*80)
 
         # Task for the agent
         task_message = """Please complete the following research task:
@@ -308,23 +346,24 @@ def main():
    b. If Wikipedia has no info, use identify_person_with_llm as fallback
    c. Check if they are notable using check_if_notable
    d. If notable, research their best work using research_best_work
+if no users were found born before 2000, repeat the process until there are enough people from the API
 
 Provide a comprehensive summary of your findings for each person."""
 
         # Invoke the agent
-        response = agent.agent.invoke({
-            "messages": [{"role": "user", "content": task_message}]
-        })
+        response = agent.agent.invoke(
+            {"messages": [{"role": "user", "content": task_message}]}
+        )
 
         # Display the agent's response
         print("\n🎯 AGENT WORKFLOW COMPLETE")
-        print("="*80)
+        print("-" * 80)
         print("\nAgent's Final Report:")
-        print("="*80)
+        print("-" * 80)
 
         # Extract the final message content
         final_message = response["messages"][-1]
-        if hasattr(final_message, 'content'):
+        if hasattr(final_message, "content"):
             agent_output = final_message.content
         else:
             agent_output = str(final_message)
@@ -353,6 +392,7 @@ Provide a comprehensive summary of your findings for each person."""
     except Exception as e:
         print(f"\n❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 
